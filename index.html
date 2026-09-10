@@ -39,7 +39,7 @@
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h1 style="font-size: 1.4rem; font-weight: 700; margin: 0;">Danh sách hồ sơ sinh viên gửi về</h1>
-                <span id="totalCount" style="color: #64748b; font-weight: 500; font-size: 0.9rem;">Tổng số: 4 hồ sơ</span>
+                <span id="totalCount" style="color: #64748b; font-weight: 500; font-size: 0.9rem;">Đang tải...</span>
             </div>
 
             <div style="overflow-x: auto;">
@@ -56,20 +56,36 @@
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        <!-- Dữ liệu render động -->
+                        <tr><td colspan="7" style="text-align: center; padding: 40px; color: #0284c7;"><i class="fas fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px;">Đang đồng bộ dữ liệu...</p></td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </main>
 
-    <script>
+    <!-- Thêm Firebase SDK để đồng bộ trạng thái trực tiếp sang tab Lịch sử của sinh viên -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, query, where, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCBb9d1i-syb6cL0y_N6nC0Wi23GKlDoVs",
+            authDomain: "huit-youth-portal.firebaseapp.com",
+            projectId: "huit-youth-portal",
+            storageBucket: "huit-youth-portal.firebasestorage.app",
+            messagingSenderId: "78373587861",
+            appId: "1:78373587861:web:1b831d502820f23558c49c"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
         const API_URL = "https://script.google.com/macros/s/AKfycbwRHgVVKJWFq0HCpEQkEyhse0WDL8tDx23HD8wZwEo5oxzGYTN1qYoz099MJ4ThsQKL/exec";
 
-        async function fetchData() {
+        window.fetchData = async function() {
             const tbody = document.getElementById('tableBody');
             const totalCount = document.getElementById('totalCount');
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 40px; color: #0284c7;"><i class="fas fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px;">Đang đồng bộ dữ liệu...</p></td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 40px; color: #0284c7;"><i class="fas fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px;">Đang tải danh sách...</p></td></tr>`;
 
             try {
                 const response = await fetch(API_URL);
@@ -111,12 +127,13 @@
             } catch (err) {
                 tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: red; padding: 40px;">Lỗi tải dữ liệu: ${err.message}</td></tr>`;
             }
-        }
+        };
 
-        async function updateDocStatus(id, newStatus) {
+        window.updateDocStatus = async function(id, newStatus) {
             if (!confirm(`Xác nhận đổi trạng thái hồ sơ ${id} thành "${newStatus}"?`)) return;
 
             try {
+                // 1. Cập nhật trên Google Sheet và gửi email tự động
                 await fetch(API_URL, {
                     method: 'POST',
                     body: JSON.stringify({
@@ -126,15 +143,27 @@
                     })
                 });
 
-                alert(`Đã duyệt thành công hồ sơ ${id}! Trạng thái trên Google Sheet đã được cập nhật và Email đã tự động gửi về cho sinh viên.`);
-                fetchData(); 
+                // 2. Đồng thời cập nhật trạng thái trên Firebase Firestore để tab Lịch sử của sinh viên đổi theo
+                const q = query(collection(db, "applications"));
+                const querySnapshot = await getDocs(q);
+                querySnapshot.forEach(async (document) => {
+                    const docData = document.data();
+                    const shortId = "HS" + document.id.substring(0, 8).toUpperCase();
+                    if (shortId === id) {
+                        const docRef = doc(db, "applications", document.id);
+                        await updateDoc(docRef, { status: newStatus });
+                    }
+                });
+
+                alert(`Đã duyệt thành công hồ sơ ${id}! Google Sheet, Email sinh viên và Lịch sử web đã được đồng bộ.`);
+                window.fetchData(); 
             } catch (err) {
                 alert("Lỗi khi cập nhật: " + err.message);
-                fetchData();
+                window.fetchData();
             }
-        }
+        };
 
-        window.onload = fetchData;
+        window.onload = window.fetchData;
     </script>
 </body>
 </html>
