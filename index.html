@@ -27,7 +27,7 @@
         .btn-primary { background: var(--primary); color: #fff; padding: 10px 20px; font-size: 0.9rem; border-radius: 10px; }
         .badge { padding: 6px 14px; border-radius: 30px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
 
-        /* CSS MODAL XÁC NHẬN */
+        /* CSS POPUP XÁC NHẬN (MODAL) */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 2000; align-items: center; justify-content: center; }
         .modal-box { background: #fff; padding: 30px; border-radius: 16px; width: 100%; max-width: 420px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); animation: scaleUp 0.2s ease; }
         @keyframes scaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -54,7 +54,7 @@
                 <h1 style="font-size: 1.3rem; font-weight: 700; margin: 0; color: #0f172a;">Danh sách hồ sơ sinh viên gửi về</h1>
                 <span id="totalCount" style="color: var(--text-light); font-weight: 600; font-size: 0.9rem; background: #f1f5f9; padding: 6px 14px; border-radius: 20px;">Đang tải...</span>
             </div>
-            <p style="color: var(--text-light); font-size: 0.9rem; margin-top: 0; margin-bottom: 20px;">Xử lý và duyệt hồ sơ trực tiếp từ bảng quản trị.</p>
+            <p style="color: var(--text-light); font-size: 0.9rem; margin-top: 0; margin-bottom: 20px;">Xử lý, duyệt hồ sơ và gửi thông báo tự động tới sinh viên.</p>
 
             <div style="overflow-x: auto;">
                 <table>
@@ -77,12 +77,12 @@
         </div>
     </main>
 
-    <!-- MODAL XÁC NHẬN DUYỆT -->
+    <!-- MODAL POPUP XÁC NHẬN -->
     <div id="confirmModal" class="modal-overlay">
         <div class="modal-box">
-            <div id="modalIcon" style="font-size: 3rem; margin-bottom: 15px;"><i class="fas fa-question-circle" style="color: #3b82f6;"></i></div>
+            <div id="modalIcon" style="font-size: 3rem; margin-bottom: 15px;"></div>
             <h3 id="modalTitle" style="font-size: 1.25rem; font-weight: 700; margin: 0 0 10px 0;">Xác nhận thao tác</h3>
-            <p id="modalDesc" style="color: var(--text-light); font-size: 0.95rem; margin-bottom: 25px;">Bạn có chắc chắn muốn thay đổi trạng thái hồ sơ này không?</p>
+            <p id="modalDesc" style="color: var(--text-light); font-size: 0.95rem; margin-bottom: 25px;"></p>
             <div style="display: flex; gap: 10px;">
                 <button onclick="closeModal()" class="btn" style="flex: 1; justify-content: center; background: #e2e8f0; color: #334155; padding: 12px;">Hủy bỏ</button>
                 <button id="modalConfirmBtn" class="btn btn-primary" style="flex: 1; justify-content: center; padding: 12px;">Xác nhận</button>
@@ -90,6 +90,7 @@
         </div>
     </div>
 
+    <!-- LOGIC XỬ LÝ JAVASCRIPT & FIREBASE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -110,6 +111,7 @@
         let currentSelectedId = null;
         let currentSelectedStatus = null;
 
+        // Tải danh sách hồ sơ từ Google Sheet lên bảng quản trị
         window.fetchData = async function() {
             const tbody = document.getElementById('tableBody');
             const totalCount = document.getElementById('totalCount');
@@ -129,7 +131,7 @@
                 tbody.innerHTML = '';
 
                 result.reverse().forEach(item => {
-                    let badgeBg = "#e0f2fe", badgeColor = "#0284c7", icon = "fa-clock";
+                    let badgeBg = "#e0f2fe", badgeColor = "#0369a1", icon = "fa-clock";
                     if (item.status === "Hoàn thành") { badgeBg = "#dcfce7"; badgeColor = "#15803d"; icon = "fa-check-circle"; }
                     else if (item.status === "Yêu cầu bổ sung") { badgeBg = "#fef3c7"; badgeColor = "#b45309"; icon = "fa-exclamation-triangle"; }
 
@@ -157,7 +159,7 @@
             }
         };
 
-        // Mở popup xác nhận
+        // Mở khung Popup xác nhận
         window.openModal = function(id, status) {
             currentSelectedId = id;
             currentSelectedStatus = status;
@@ -170,7 +172,7 @@
             if (status === 'Hoàn thành') {
                 modalIcon.innerHTML = '<i class="fas fa-check-circle" style="color: #10b981;"></i>';
                 modalTitle.innerText = "Xác nhận hoàn thành hồ sơ";
-                modalDesc.innerHTML = `Hồ sơ <b>${id}</b> sẽ được duyệt <b>Hoàn thành</b>.<br>Hệ thống sẽ tự động gửi Email thông báo cho sinh viên!`;
+                modalDesc.innerHTML = `Hồ sơ <b>${id}</b> sẽ được chuyển sang trạng thái <b>Hoàn thành</b>.<br>Hệ thống sẽ đồng thời gửi Email tự động cho sinh viên.`;
                 confirmBtn.style.background = "#10b981";
             } else {
                 modalIcon.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #f59e0b;"></i>';
@@ -182,36 +184,37 @@
             document.getElementById('confirmModal').style.display = 'flex';
         };
 
+        // Đóng khung Popup xác nhận
         window.closeModal = function() {
             document.getElementById('confirmModal').style.display = 'none';
         };
 
-        // Xử lý khi bấm nút Xác nhận trong popup
+        // Khi người dùng bấm nút Xác nhận trong Popup
         document.getElementById('modalConfirmBtn').onclick = async function() {
             closeModal();
             const id = currentSelectedId;
             const newStatus = currentSelectedStatus;
 
             try {
-                // 1. Cập nhật Google Sheet + Gửi email tự động
+                // 1. Cập nhật Google Sheet và kích hoạt gửi Email thông báo tự động
                 await fetch(API_URL, {
                     method: 'POST',
                     body: JSON.stringify({ action: "updateStatus", id: id, newStatus: newStatus })
                 });
 
-                // 2. Đồng bộ chuẩn xác sang Firebase Firestore (Sửa lỗi khớp ID đầy đủ)
+                // 2. Đồng thời cập nhật trạng thái trên Firebase Firestore để tab Lịch sử của sinh viên đổi theo chuẩn xác
                 const querySnapshot = await getDocs(collection(db, "applications"));
                 querySnapshot.forEach(async (document) => {
-                    const docIdStr = document.id.toUpperCase();
-                    const shortIdClean = id.replace("HS", ""); // Bỏ tiền tố HS để so sánh chính xác với chuỗi Firestore
+                    const docId = document.id;
+                    const generatedShortId = "HS" + docId.substring(0, 8).toUpperCase();
                     
-                    if (docIdStr.includes(shortIdClean)) {
-                        const docRef = doc(db, "applications", document.id);
+                    if (generatedShortId === id) {
+                        const docRef = doc(db, "applications", docId);
                         await updateDoc(docRef, { status: newStatus });
                     }
                 });
 
-                alert(`Đã cập nhật thành công hồ sơ ${id} thành "${newStatus}"!`);
+                alert(`Đã duyệt thành công hồ sơ ${id} thành "${newStatus}"! (Google Sheet, Email và Lịch sử sinh viên đã được đồng bộ).`);
                 window.fetchData();
             } catch (err) {
                 alert("Lỗi khi cập nhật: " + err.message);
@@ -219,6 +222,7 @@
             }
         };
 
+        // Tự động load dữ liệu ngay khi mở trang Admin
         window.onload = window.fetchData;
     </script>
 </body>
