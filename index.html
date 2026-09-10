@@ -28,7 +28,7 @@
     <header class="header">
         <div style="font-weight: 800; font-size: 1.1rem; color: var(--primary-red);">
             TRANG QUẢN TRỊ ĐOÀN - HỘI HUIT
-            <span style="display: block; font-size: 0.75rem; color: #64748b; font-weight: 500;">Duyệt hồ sơ & gửi thông báo tự động</span>
+            <span style="display: block; font-size: 0.75rem; color: #64748b; font-weight: 500;">Duyệt hồ sơ trực tiếp & Tự động gửi Email</span>
         </div>
         <div>
             <button onclick="fetchData()" class="btn btn-primary"><i class="fas fa-sync-alt"></i> Làm mới dữ liệu</button>
@@ -38,7 +38,7 @@
     <main class="container">
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h1 style="font-size: 1.4rem; font-weight: 700; margin: 0;">Danh sách chờ duyệt</h1>
+                <h1 style="font-size: 1.4rem; font-weight: 700; margin: 0;">Danh sách hồ sơ cần xử lý</h1>
                 <span id="totalCount" style="color: #64748b; font-weight: 500; font-size: 0.9rem;">Đang tải...</span>
             </div>
 
@@ -49,14 +49,14 @@
                             <th>Mã HS</th>
                             <th>Sinh viên</th>
                             <th>Loại hồ sơ</th>
-                            <th>Tệp</th>
+                            <th>Tệp đính kèm</th>
                             <th>Nội dung</th>
                             <th>Trạng thái</th>
                             <th style="text-align: center;">Thao tác duyệt Web</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        <tr><td colspan="7" style="text-align: center; padding: 40px; color: #64748b;"><i class="fas fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px;">Đang kết nối API Google Sheet...</p></td></tr>
+                        <tr><td colspan="7" style="text-align: center; padding: 40px; color: #64748b;"><i class="fas fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px;">Đang tải danh sách từ Google Sheet...</p></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -116,15 +116,10 @@
         async function updateDocStatus(id, newStatus) {
             if (!confirm(`Xác nhận đổi trạng thái hồ sơ ${id} thành "${newStatus}"?`)) return;
 
-            // Hiển thị thông báo đang xử lý
-            event.target.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
-
             try {
-                // Gửi request POST tới Google Sheet để cập nhật và kích hoạt gửi mail
+                // Gửi request POST tới Google Sheet bằng text/plain để vượt qua cơ chế CORS mặc định của GAS
                 await fetch(API_URL, {
                     method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         action: "updateStatus",
                         id: id,
@@ -132,7 +127,7 @@
                     })
                 });
 
-                alert(`Đã cập nhật hồ sơ ${id} thành công! (Google Sheet và Email đã được kích hoạt).`);
+                alert(`Đã cập nhật thành công! Trạng thái trên Google Sheet đã đổi và Email đã tự động gửi về cho sinh viên.`);
                 fetchData(); // Tải lại bảng ngay lập tức
             } catch (err) {
                 alert("Lỗi khi cập nhật: " + err.message);
